@@ -18,8 +18,9 @@ import { getPendingTransactionsCount, processSyncQueue } from "@/lib/sync-queue"
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-export default function MeetingSessionPage({ params }: { params: { id: string } }) {
-  const groupId = parseInt(params.id);
+export default async function MeetingSessionPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const groupId = parseInt(resolvedParams.id);
   const { data: group, isLoading, error } = useGroup(groupId);
   const [activeTab, setActiveTab] = useState("attendance");
   const [pendingCount, setPendingCount] = useState(0);

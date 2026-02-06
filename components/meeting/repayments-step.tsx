@@ -37,8 +37,8 @@ export function RepaymentsStep({
     const key = `${memberId}-${loanId}`;
     setAmounts({ ...amounts, [key]: value });
 
-    const numValue = parseFloat(value) || 0;
-    if (numValue >= 0) {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0) {
       onUpdateRepayment(memberId, loanId, numValue);
     }
   };

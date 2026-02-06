@@ -8,7 +8,7 @@ export function addToSyncQueue(transaction: Omit<QueuedTransaction, "id" | "crea
   const queue = getSyncQueue();
   const newTransaction: QueuedTransaction = {
     ...transaction,
-    id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: `txn_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     createdAt: Date.now(),
     retryCount: 0,
     status: "PENDING",

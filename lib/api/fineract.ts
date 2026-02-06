@@ -8,9 +8,11 @@ import {
 const FINERACT_BASE_URL =
   process.env.NEXT_PUBLIC_FINERACT_API_URL || "https://demo.fineract.dev/fineract-provider/api/v1";
 const FINERACT_TENANT = process.env.NEXT_PUBLIC_FINERACT_TENANT || "default";
+const FINERACT_USERNAME = process.env.NEXT_PUBLIC_FINERACT_USERNAME || "mifos";
+const FINERACT_PASSWORD = process.env.NEXT_PUBLIC_FINERACT_PASSWORD || "password";
 
 // For demo purposes, using basic auth. In production, use proper authentication
-const authHeader = "Basic " + btoa("mifos:password");
+const authHeader = "Basic " + btoa(`${FINERACT_USERNAME}:${FINERACT_PASSWORD}`);
 
 export async function fetchGroup(groupId: number): Promise<FineractGroup> {
   // For demo purposes, return mock data if API is not available
