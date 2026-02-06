@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import { useGroup } from "@/lib/hooks/use-fineract";
 import {
   MeetingSessionState,
@@ -11,28 +11,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AttendanceStep } from "@/components/meeting/attendance-step";
-import { SharesStep } from "@/components/meeting/shares-step";
-import { RepaymentsStep } from "@/components/meeting/repayments-step";
+import { CollectionStep } from "@/components/meeting/collection-step";
 import { ReviewStep } from "@/components/meeting/review-step";
+import { DisbursementStep, DisbursementData } from "@/components/meeting/disbursement-step";
+import { MemberTransactions } from "@/components/meeting/member-transaction-form";
 import { getPendingTransactionsCount, processSyncQueue } from "@/lib/sync-queue";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-export default async function MeetingSessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+type Step = "attendance" | "collections" | "disbursement" | "review";
+
+export default function MeetingSessionPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const groupId = parseInt(resolvedParams.id);
   const { data: group, isLoading, error } = useGroup(groupId);
-  const [activeTab, setActiveTab] = useState("attendance");
+  const [step, setStep] = useState<Step>("attendance");
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const [sessionState, setSessionState] = useState<MeetingSessionState>({
-    groupId,
-    attendance: [],
-    shares: [],
-    socialFund: [],
-    repayments: [],
+  // New Unified State
+  const [attendance, setAttendance] = useState<{ memberId: number; status: AttendanceStatus }[]>([]);
+  // Map of MemberID -> Transactions
+  const [transactions, setTransactions] = useState<Record<number, MemberTransactions>>({});
+  const [disbursementData, setDisbursementData] = useState<DisbursementData>({
+    openingBalanceCents: 0,
+    expenses: [],
+    amountToBankCents: 0
   });
+
+  const [presentMembers, setPresentMembers] = useState<FineractMember[]>([]);
 
   useEffect(() => {
     const updatePendingCount = () => {
@@ -44,6 +51,15 @@ export default async function MeetingSessionPage({ params }: { params: Promise<{
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (group && group.members) {
+      const presentMemberIds = attendance
+        .filter((a) => a.status === "PRESENT")
+        .map((a) => a.memberId);
+      setPresentMembers(group.members.filter((m) => presentMemberIds.includes(m.id)));
+    }
+  }, [attendance, group]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -58,81 +74,31 @@ export default async function MeetingSessionPage({ params }: { params: Promise<{
   };
 
   const updateAttendance = (memberId: number, status: AttendanceStatus) => {
-    setSessionState((prev) => {
-      const existing = prev.attendance.find((a) => a.memberId === memberId);
+    setAttendance((prev) => {
+      const existing = prev.find((a) => a.memberId === memberId);
       if (existing) {
-        return {
-          ...prev,
-          attendance: prev.attendance.map((a) =>
-            a.memberId === memberId ? { ...a, status } : a
-          ),
-        };
+        return prev.map((a) => (a.memberId === memberId ? { ...a, status } : a));
       }
-      return {
-        ...prev,
-        attendance: [...prev.attendance, { memberId, status }],
-      };
+      return [...prev, { memberId, status }];
     });
   };
 
-  const updateShares = (memberId: number, shares: number) => {
-    const SHARE_PRICE = 5000; // UGX per share
-    setSessionState((prev) => {
-      const existing = prev.shares.find((s) => s.memberId === memberId);
-      if (existing) {
-        return {
-          ...prev,
-          shares: prev.shares.map((s) =>
-            s.memberId === memberId
-              ? { ...s, shares, amount: shares * SHARE_PRICE }
-              : s
-          ),
-        };
-      }
-      return {
-        ...prev,
-        shares: [...prev.shares, { memberId, shares, amount: shares * SHARE_PRICE }],
-      };
-    });
+  const updateTransaction = (memberId: number, data: MemberTransactions) => {
+    setTransactions((prev) => ({
+      ...prev,
+      [memberId]: data,
+    }));
   };
 
-  const updateSocialFund = (memberId: number, amount: number) => {
-    setSessionState((prev) => {
-      const existing = prev.socialFund.find((s) => s.memberId === memberId);
-      if (existing) {
-        return {
-          ...prev,
-          socialFund: prev.socialFund.map((s) =>
-            s.memberId === memberId ? { ...s, amount } : s
-          ),
-        };
-      }
-      return {
-        ...prev,
-        socialFund: [...prev.socialFund, { memberId, amount }],
-      };
-    });
-  };
-
-  const updateRepayment = (memberId: number, loanId: number, amount: number) => {
-    setSessionState((prev) => {
-      const existing = prev.repayments.find(
-        (r) => r.memberId === memberId && r.loanId === loanId
-      );
-      if (existing) {
-        return {
-          ...prev,
-          repayments: prev.repayments.map((r) =>
-            r.memberId === memberId && r.loanId === loanId ? { ...r, amount } : r
-          ),
-        };
-      }
-      return {
-        ...prev,
-        repayments: [...prev.repayments, { memberId, loanId, amount }],
-      };
-    });
-  };
+  const totalCollectedCents = useMemo(() => {
+    return Object.values(transactions).reduce((sum, t) => {
+      const shares = (t.shareCount || 0) * 5000; // Assuming 50 cents per share, so 5000 cents
+      const savings = t.savingsCents || 0;
+      const charges = t.charges?.reduce((cSum, c) => cSum + c.amountCents, 0) || 0;
+      const loans = t.loanRepayments.reduce((lSum, l) => lSum + l.amountCents, 0);
+      return sum + shares + savings + charges + loans;
+    }, 0);
+  }, [transactions]);
 
   if (isLoading) {
     return (
@@ -162,78 +128,67 @@ export default async function MeetingSessionPage({ params }: { params: Promise<{
       <div className="max-w-4xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">{group.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{group.name}</h1>
             <p className="text-muted-foreground">Meeting Session</p>
           </div>
-          {pendingCount > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {pendingCount} Pending
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSync}
-                disabled={isSyncing}
-              >
-                {isSyncing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing...
-                  </>
-                ) : (
-                  "Sync Now"
-                )}
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleSync} disabled={isSyncing}>
+              {isSyncing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Badge variant="secondary" className="mr-2">{pendingCount}</Badge>
+              )}
+              Sync Queue
+            </Button>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={step} onValueChange={(value) => setStep(value as Step)} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="attendance">Attendance</TabsTrigger>
-            <TabsTrigger value="shares">Shares</TabsTrigger>
-            <TabsTrigger value="repayments">Repayments</TabsTrigger>
-            <TabsTrigger value="review">Review</TabsTrigger>
+            <TabsTrigger value="attendance">1. Attendance</TabsTrigger>
+            <TabsTrigger value="collections">2. Collections</TabsTrigger>
+            <TabsTrigger value="disbursement">3. Disbursement</TabsTrigger>
+            <TabsTrigger value="review">4. Review</TabsTrigger>
           </TabsList>
 
           <TabsContent value="attendance">
             <AttendanceStep
               members={group.members || []}
-              attendance={sessionState.attendance}
+              attendance={attendance}
               onUpdateAttendance={updateAttendance}
-              onNext={() => setActiveTab("shares")}
+              onNext={() => setStep("collections")}
             />
           </TabsContent>
 
-          <TabsContent value="shares">
-            <SharesStep
-              members={group.members || []}
-              attendance={sessionState.attendance}
-              shares={sessionState.shares}
-              socialFund={sessionState.socialFund}
-              onUpdateShares={updateShares}
-              onUpdateSocialFund={updateSocialFund}
-              onNext={() => setActiveTab("repayments")}
-              onBack={() => setActiveTab("attendance")}
+          <TabsContent value="collections">
+            <CollectionStep
+              members={presentMembers}
+              attendance={attendance}
+              transactions={transactions}
+              onUpdateTransaction={updateTransaction}
+              onBack={() => setStep("attendance")}
+              onNext={() => setStep("disbursement")}
             />
           </TabsContent>
 
-          <TabsContent value="repayments">
-            <RepaymentsStep
-              members={group.members || []}
-              repayments={sessionState.repayments}
-              onUpdateRepayment={updateRepayment}
-              onNext={() => setActiveTab("review")}
-              onBack={() => setActiveTab("shares")}
+          <TabsContent value="disbursement">
+            <DisbursementStep
+              totalCollectedCents={totalCollectedCents}
+              initialData={disbursementData}
+              onSave={(data) => {
+                setDisbursementData(data);
+                setStep("review");
+              }}
+              onBack={() => setStep("collections")}
             />
           </TabsContent>
 
           <TabsContent value="review">
             <ReviewStep
               group={group}
-              sessionState={sessionState}
-              onBack={() => setActiveTab("repayments")}
+              transactions={transactions}
+              disbursementData={disbursementData}
+              onBack={() => setStep("disbursement")}
             />
           </TabsContent>
         </Tabs>
