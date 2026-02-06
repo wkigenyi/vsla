@@ -17,6 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PiggyBank, Briefcase, Coins, AlertCircle, PieChart } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MemberTransactionFormProps {
     isOpen: boolean;
@@ -136,93 +137,113 @@ export function MemberTransactionForm({
                 <ScrollArea className="flex-1 -mx-6 px-8 my-4">
                     <form id="transaction-form" onSubmit={handleSubmit} className="space-y-6 pb-6">
                         {/* Shares Section */}
-                        <div className="space-y-4">
-
-
-
-
-
-                            {/* Savings Section */}
-                            <Card className="border-l-4 border-l-green-500">
-                                <CardHeader className="pb-2">
+                        <Card className="border-none shadow-sm bg-card ring-1 ring-border">
+                            <CardHeader className="pb-2 bg-muted/30 border-b">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Coins className="w-5 h-5 text-green-600" />
-                                        <CardTitle className="text-lg">Savings</CardTitle>
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <PieChart className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <CardTitle className="text-base font-semibold">Shares</CardTitle>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="savings">Amount to Save</Label>
-                                        <MoneyInput
-                                            id="savings"
-                                            value={formData.savingsCents || 0}
-                                            onChange={(val) => setFormData(prev => ({ ...prev, savingsCents: val }))}
-                                            className="text-lg"
-                                            placeholder="Enter amount"
-                                        />
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                        @ {SHARE_PRICE_UGX.toLocaleString()}/=
                                     </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="border-l-4 border-l-primary">
-                                <CardHeader className="pb-2">
-                                    <div className="flex items-center gap-2">
-                                        <PieChart className="w-5 h-5 text-primary" />
-                                        <CardTitle className="text-lg"><Label htmlFor="shares">Number of Shares (@ {SHARE_PRICE_UGX.toLocaleString()})</Label>
-                                        </CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex items-center gap-4">
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <Label htmlFor="shares" className="sr-only">Number of Shares</Label>
                                         <Input
                                             id="shares"
                                             type="number"
                                             min="0"
                                             value={formData.shareCount || ""}
                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSharesChange(e.target.value)}
-                                            className="text-lg"
+                                            className="text-2xl h-14 font-medium text-center"
                                             placeholder="0"
                                         />
-                                        <div className="min-w-[100px] text-right font-mono font-medium">
-                                            {((formData.shareCount || 0) * SHARE_PRICE_UGX).toLocaleString()}
+                                        <div className="text-xs text-center text-muted-foreground mt-1">
+                                            Enter quantity
                                         </div>
                                     </div>
-                                </CardContent>
+                                    <div className="text-2xl font-light text-muted-foreground">×</div>
+                                    <div className="flex-1 bg-muted/30 rounded-lg h-14 flex flex-col items-center justify-center border border-muted">
+                                        <span className="text-lg font-bold">
+                                            {((formData.shareCount || 0) * SHARE_PRICE_UGX).toLocaleString()}
+                                        </span>
+                                        <span className="text-[10px] uppercase text-muted-foreground">Total (UGX)</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                            </Card>
-                        </div>
-
-
-
-
-                        {/* Charges Section */}
-                        <Card className="border-l-4 border-l-red-500">
-                            <CardHeader className="pb-2">
+                        {/* Savings Section */}
+                        <Card className="border-none shadow-sm bg-card ring-1 ring-border">
+                            <CardHeader className="pb-2 bg-muted/30 border-b">
                                 <div className="flex items-center gap-2">
-                                    <AlertCircle className="w-5 h-5 text-red-500" />
-                                    <CardTitle className="text-lg">Charges & Fees</CardTitle>
+                                    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                        <Coins className="w-4 h-4 text-green-600" />
+                                    </div>
+                                    <CardTitle className="text-base font-semibold">Savings</CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="pt-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="savings" className="sr-only">Amount to Save</Label>
+                                    <MoneyInput
+                                        id="savings"
+                                        value={formData.savingsCents || 0}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, savingsCents: val }))}
+                                        className="text-2xl h-14 font-medium"
+                                        placeholder="Amount"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Charges Section */}
+                        <Card className="border-none shadow-sm bg-card ring-1 ring-border">
+                            <CardHeader className="pb-2 bg-muted/30 border-b">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                                        <AlertCircle className="w-4 h-4 text-red-500" />
+                                    </div>
+                                    <CardTitle className="text-base font-semibold">Charges & Fees</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-4">
                                 <div className="grid gap-3">
                                     {AVAILABLE_CHARGES.map((charge) => (
-                                        <div key={charge.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                        <div
+                                            key={charge.id}
+                                            className={cn(
+                                                "flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer",
+                                                isChargeApplied(charge.id)
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-muted bg-card hover:bg-muted/50"
+                                            )}
+                                            onClick={() => handleChargeToggle(charge.id, charge.name, charge.defaultAmount, !isChargeApplied(charge.id))}
+                                        >
                                             <div className="flex items-center gap-3">
                                                 <Checkbox
                                                     id={`charge-${charge.id}`}
                                                     checked={isChargeApplied(charge.id)}
-                                                    onCheckedChange={(checked) => handleChargeToggle(charge.id, charge.name, charge.defaultAmount, checked as boolean)}
+                                                    onCheckedChange={() => { }} // Handled by div click
+                                                    className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                                                 />
                                                 <div className="grid gap-0.5">
                                                     <Label
                                                         htmlFor={`charge-${charge.id}`}
-                                                        className="font-medium cursor-pointer"
+                                                        className="font-medium cursor-pointer pointer-events-none text-base"
                                                     >
                                                         {charge.name}
                                                     </Label>
                                                 </div>
                                             </div>
                                             <div className="font-mono font-medium">
-                                                {charge.defaultAmount.toLocaleString()} <span className="text-xs text-muted-foreground">UGX</span>
+                                                {charge.defaultAmount.toLocaleString()}
                                             </div>
                                         </div>
                                     ))}
@@ -230,43 +251,41 @@ export function MemberTransactionForm({
                             </CardContent>
                         </Card>
 
-
-
                         {/* Loans Section */}
-
-                        {/* Loans Section */}
-                        <Card className="border-l-4 border-l-blue-500">
-                            <CardHeader className="pb-2">
+                        <Card className="border-none shadow-sm bg-card ring-1 ring-border">
+                            <CardHeader className="pb-2 bg-muted/30 border-b">
                                 <div className="flex items-center gap-2">
-                                    <Briefcase className="w-5 h-5 text-blue-500" />
-                                    <CardTitle className="text-lg">Loans</CardTitle>
+                                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <Briefcase className="w-4 h-4 text-blue-500" />
+                                    </div>
+                                    <CardTitle className="text-base font-semibold">Loans</CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="pt-4">
                                 {(!member.loans || member.loans.length === 0) && (
-                                    <div className="text-sm text-muted-foreground italic flex items-center gap-2 py-2">
-                                        <AlertCircle className="w-4 h-4" /> No active loans
+                                    <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
+                                        No active loans
                                     </div>
                                 )}
 
                                 <div className="space-y-4">
                                     {member.loans?.map((loan) => (
-                                        <div key={loan.id} className="p-4 border rounded-lg space-y-3 bg-muted/20">
+                                        <div key={loan.id} className="p-4 border rounded-xl space-y-3 bg-card shadow-sm">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <div className="font-medium text-lg">Loan #{loan.accountNo}</div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Outstanding: <span className="font-mono text-foreground font-medium">{loan.totalOutstanding.toLocaleString()}</span>
+                                                    <div className="font-semibold">Loan #{loan.accountNo}</div>
+                                                    <div className="text-sm text-muted-foreground mt-1">
+                                                        Outstanding: <span className="font-mono text-foreground font-medium bg-muted px-1.5 py-0.5 rounded">{loan.totalOutstanding.toLocaleString()}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="grid gap-2">
-                                                <Label htmlFor={`loan-${loan.id}`}>Repayment Amount</Label>
+                                                <Label htmlFor={`loan-${loan.id}`}>Repayment</Label>
                                                 <MoneyInput
                                                     id={`loan-${loan.id}`}
                                                     value={getLoanRepayment(loan.id) || 0}
                                                     onChange={(val) => handleLoanRepaymentChange(loan.id, val.toString())}
-                                                    className="text-lg"
+                                                    className="text-xl h-12"
                                                     placeholder="Enter repayment"
                                                     max={loan.totalOutstanding}
                                                 />
@@ -279,9 +298,9 @@ export function MemberTransactionForm({
                     </form>
                 </ScrollArea>
 
-                <div className="border-t bg-muted/20 p-6 space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-center bg-card border rounded-lg p-4 shadow-sm">
-                        <span className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Total Tendered</span>
+                <div className="border-t bg-background p-4 sm:p-6 space-y-4 pb-safe">
+                    <div className="flex justify-between items-center bg-muted/50 rounded-xl p-4">
+                        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total</span>
                         <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-bold text-primary">
                                 {(
@@ -295,11 +314,11 @@ export function MemberTransactionForm({
                         </div>
                     </div>
                     <div className="flex gap-3 w-full">
-                        <Button variant="outline" size="lg" onClick={onClose} className="flex-1">
+                        <Button variant="outline" size="lg" onClick={onClose} className="flex-1 h-12 text-base">
                             Cancel
                         </Button>
-                        <Button type="submit" size="lg" form="transaction-form" className="flex-[2]">
-                            {isLastMember ? "Save & Finish" : "Save & Next Member"}
+                        <Button type="submit" size="lg" form="transaction-form" className="flex-[2] h-12 text-base font-semibold shadow-md">
+                            {isLastMember ? "Finish Collection" : "Save & Next"}
                         </Button>
                     </div>
                 </div>

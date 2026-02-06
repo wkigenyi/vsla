@@ -82,23 +82,18 @@ export function DisbursementStep({ totalCollectedCents, initialData, onSave, onB
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Opening Balance</CardTitle>
-                    <CardDescription>Enter cash brought forward from the previous session.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-2">
-                        <Label htmlFor="opening-balance">Opening Balance</Label>
-                        <MoneyInput
-                            id="opening-balance"
-                            value={openingBalance}
-                            onChange={setOpeningBalance}
-                            className="text-lg"
-                            placeholder="Enter opening balance"
-                        />
+            <Card className="bg-muted/30 border-dashed">
+                <CardHeader className="py-4">
+                    <div className="flex justify-between items-center">
+                        <div className="space-y-1">
+                            <CardTitle className="text-base">Opening Balance Verified</CardTitle>
+                            <CardDescription>Cash from previous session</CardDescription>
+                        </div>
+                        <div className="text-xl font-mono font-bold">
+                            {openingBalance.toLocaleString()} UGX
+                        </div>
                     </div>
-                </CardContent>
+                </CardHeader>
             </Card>
 
             <Card>

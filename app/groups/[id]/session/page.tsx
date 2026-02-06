@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { AttendanceStep } from "@/components/meeting/attendance-step";
 import { CollectionStep } from "@/components/meeting/collection-step";
+import { OpeningBalanceStep } from "@/components/meeting/opening-balance-step";
 import { ReviewStep } from "@/components/meeting/review-step";
 import { DisbursementStep, DisbursementData } from "@/components/meeting/disbursement-step";
 import { MemberTransactions } from "@/components/meeting/member-transaction-form";
@@ -19,13 +20,13 @@ import { getPendingTransactionsCount, processSyncQueue } from "@/lib/sync-queue"
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-type Step = "attendance" | "collections" | "disbursement" | "review";
+type Step = "opening" | "attendance" | "collections" | "disbursement" | "review";
 
 export default function MeetingSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const groupId = parseInt(resolvedParams.id);
   const { data: group, isLoading, error } = useGroup(groupId);
-  const [step, setStep] = useState<Step>("attendance");
+  const [step, setStep] = useState<Step>("opening");
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -33,6 +34,7 @@ export default function MeetingSessionPage({ params }: { params: Promise<{ id: s
   const [attendance, setAttendance] = useState<{ memberId: number; status: AttendanceStatus }[]>([]);
   // Map of MemberID -> Transactions
   const [transactions, setTransactions] = useState<Record<number, MemberTransactions>>({});
+  const [openingBalance, setOpeningBalance] = useState(0);
   const [disbursementData, setDisbursementData] = useState<DisbursementData>({
     openingBalanceCents: 0,
     expenses: [],
@@ -51,6 +53,11 @@ export default function MeetingSessionPage({ params }: { params: Promise<{ id: s
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    // Keep disbursement data in sync with opening balance
+    setDisbursementData(prev => ({ ...prev, openingBalanceCents: openingBalance }));
+  }, [openingBalance]);
 
   useEffect(() => {
     if (group && group.members) {
@@ -144,12 +151,25 @@ export default function MeetingSessionPage({ params }: { params: Promise<{ id: s
         </div>
 
         <Tabs value={step} onValueChange={(value) => setStep(value as Step)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="attendance">1. Attendance</TabsTrigger>
-            <TabsTrigger value="collections">2. Collections</TabsTrigger>
-            <TabsTrigger value="disbursement">3. Disbursement</TabsTrigger>
-            <TabsTrigger value="review">4. Review</TabsTrigger>
-          </TabsList>
+          {step !== "opening" && (
+            <TabsList className="w-full flex justify-start overflow-x-auto h-auto p-1 bg-muted/50 mb-6">
+              <TabsTrigger value="opening" className="flex-1 min-w-[100px]">Start</TabsTrigger>
+              <TabsTrigger value="attendance" className="flex-1 min-w-[120px]">1. Attendance</TabsTrigger>
+              <TabsTrigger value="collections" className="flex-1 min-w-[120px]">2. Collections</TabsTrigger>
+              <TabsTrigger value="disbursement" className="flex-1 min-w-[120px]">3. Disbursement</TabsTrigger>
+              <TabsTrigger value="review" className="flex-1 min-w-[100px]">4. Review</TabsTrigger>
+            </TabsList>
+          )}
+
+          <TabsContent value="opening">
+            <OpeningBalanceStep
+              initialBalance={openingBalance}
+              onSave={(balance) => {
+                setOpeningBalance(balance);
+                setStep("attendance");
+              }}
+            />
+          </TabsContent>
 
           <TabsContent value="attendance">
             <AttendanceStep

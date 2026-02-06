@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, Clock, ChevronRight, User } from "lucide-react";
 import { MemberTransactionForm, MemberTransactions } from "./member-transaction-form";
+import { cn } from "@/lib/utils";
 
 interface CollectionStepProps {
     members: FineractMember[];
@@ -92,43 +93,51 @@ export function CollectionStep({
                 </div>
             </div>
 
-            <div className="grid gap-3">
+            <div className="space-y-2">
                 {presentMembers.map((member) => {
                     const hasData = !!transactions[member.id];
                     const summary = getTransactionSummary(member.id);
 
                     return (
-                        <Card
+                        <div
                             key={member.id}
-                            className={`cursor-pointer transition-colors hover:bg-muted/50 ${hasData ? "border-primary/40 bg-primary/5" : ""
-                                }`}
                             onClick={() => handleMemberClick(member)}
+                            className={cn(
+                                "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer active:scale-[0.98]",
+                                hasData
+                                    ? "bg-primary/5 border-primary/20"
+                                    : "bg-card hover:bg-muted/50 border-transparent shadow-sm"
+                            )}
                         >
-                            <CardContent className="p-4 flex items-center gap-4">
-                                <Avatar className={hasData ? "border-2 border-primary" : ""}>
-                                    <AvatarFallback>{getMemberInitials(member.displayName)}</AvatarFallback>
-                                </Avatar>
+                            <Avatar className={cn("h-12 w-12 border-2", hasData ? "border-primary" : "border-muted")}>
+                                <AvatarFallback className="font-bold text-lg">{getMemberInitials(member.displayName)}</AvatarFallback>
+                            </Avatar>
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">{member.displayName}</div>
-                                    {summary ? (
-                                        <div className="text-sm text-primary font-medium truncate">
-                                            {summary}
-                                        </div>
-                                    ) : (
-                                        <div className="text-xs text-muted-foreground">Pending collection</div>
-                                    )}
-                                </div>
+                            <div className="flex-1 min-w-0 grid gap-1">
+                                <div className="font-semibold text-base truncate">{member.displayName}</div>
+                                {summary ? (
+                                    <div className="text-sm text-primary font-medium truncate flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3" /> {summary}
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                        <Clock className="w-3 h-3" /> Pending collection
+                                    </div>
+                                )}
+                            </div>
 
-                                <div className="text-muted-foreground">
-                                    {hasData ? (
-                                        <CheckCircle2 className="w-6 h-6 text-primary" />
-                                    ) : (
+                            <div className="text-muted-foreground">
+                                {hasData ? (
+                                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                                        <CheckCircle2 className="w-5 h-5" />
+                                    </div>
+                                ) : (
+                                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                                         <ChevronRight className="w-5 h-5" />
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     );
                 })}
             </div>
